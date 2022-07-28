@@ -1,0 +1,6 @@
+assets/
+config/
+dist/
+node_modules/
+.prettierrc
+webpack-stats.json

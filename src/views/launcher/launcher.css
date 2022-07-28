@@ -1,0 +1,47 @@
+header {
+  padding: 20px 20px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-dropdown {
+  background-color: #000;
+  color: #ddd;
+  margin: 20px;
+}
+
+header h1 {
+  font-size: 5rem;
+  flex-grow: 1;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 50px 30px;
+  border: 5px solid #999;
+  border-radius: 15px;
+
+  padding-top: 15px;
+}
+
+.list h2 {
+  text-align: center;
+  font-size: 3.5rem;
+}
+
+.list a {
+  width: 100%;
+}
+
+.list button {
+  width: 100%;
+  font-size: 3rem;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  margin: 15px;
+}
