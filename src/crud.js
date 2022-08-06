@@ -1,13 +1,9 @@
-console.log("crud")
 import DatabaseConnector from "./utils/DatabaseConnector";
-import { devMode, convertBooleanToBinary, convertBinaryToBoolean } from "./utils/utils";
-import { devConnection } from "./dev.config";
-import { prodConnection } from "./prod.config";
+import { convertBooleanToBinary, convertBinaryToBoolean } from "./utils/utils";
 import queries from "./queries";
 import { dbConfig } from './environment';
 import _ from "lodash";
 
-console.log("setting up db")
 var connection = new DatabaseConnector(dbConfig);
 console.log("The database is: ", dbConfig.database);
 
@@ -21,12 +17,6 @@ export function waitForMediaToBeSelected() {
   });
   return promise;
 }
-
-// if (devMode()) {
-//   connection = devConnection;
-// } else {
-//   connection = prodConnection;
-// }
 
 export function updateViewerStatusResponse(responseMessage) {
   viewerStatusResponse = responseMessage;

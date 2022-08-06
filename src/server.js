@@ -9,14 +9,16 @@ import dotenv from "dotenv";
 import { generateTemplate } from "./index.js";
 import { devMode } from "./utils/utils.js";
 import { serverConfig } from './environment';
-import fs from "fs";
 const formidable = require("express-formidable");
-
-import webpack from "webpack";
-import config from "../webpack.dev.js";
 
 const server = express();
 server.use(formidable());
+
+// PATHS
+const STATIC_ASSETS_PATH = path.resolve(path.join(__dirname, '..', 'assets'));
+const INDEX_FILE_PATH = path.join(__dirname, '..', 'public', 'index.html');
+const BUNDLE_PATH = path.join(__dirname, '..', 'public', 'build', 'bundle.js');
+const CSS_PATH = path.join(__dirname, '..', 'public', 'build', 'main.css');
 
 /* ENVIRONMENT */
 
@@ -25,10 +27,16 @@ if (devMode()) {
   dotenv.config(getDevEnvConfigPathObj());
 } else {
   dotenv.config(getProdEnvConfigPathObj());
-  server.use("/static", express.static(staticFilesPath));
+  server.get("/static/build/bundle.js", (request, response) => {
+    response.status(200).sendFile(BUNDLE_PATH)
+  });
+
+  server.get("/static/build/main.css", (request, response) => {
+    response.status(200).sendFile(CSS_PATH)
+  });
 }
 
-console.log("environment configured")
+server.use("/static", cors(), express.static(STATIC_ASSETS_PATH));
 
 import {
   currentlySelectedMedia,
@@ -57,47 +65,12 @@ import {
 
 const getMode = () => (devMode() ? "dev" : "prod");
 
-/* STATIC FILES */
-const getStaticDirectoryContents = () => fs.readdirSync(path.join(__dirname, "..", "dist", "static"));
-
-const staticAssetsPath = path.resolve(path.join(__dirname, "..", "assets"));
-server.use("/static", cors(), express.static(staticAssetsPath));
-
-var filenameArr = devMode() ? ["bundle.js"] : getStaticDirectoryContents();
-
-const bundlePath = path.join(
-  __dirname,
-  "..",
-  "dist",
-  "static",
-  filenameArr.find((filename) => filename.substr(-3) == ".js")
-);
 
 const addSlideshowIdToImageObject = (slideshowId, imagesToAddToSlideshow) =>
   imagesToAddToSlideshow.map((image) => {
     image.slideshowId = slideshowId;
     return image;
   });
-
-server.get("/static/bundle*.js", (request, response) => {
-  getStaticDirectoryContents().find((el) => el.substr(0, 6) === "bundle") ? response.status(200).sendFile(bundlePath) : response.status(404).send("Not found");
-});
-
-server.get("/static/bundle*.js", (request, response) => {
-  getStaticDirectoryContents().find((el) => el.substr(0, 6) === "bundle") ? response.status(200).sendFile(bundlePath) : response.status(404).send("Not found");
-});
-
-server.get("/static/main*.css", (request, response) => {
-  const cssPath = path.join(
-    __dirname,
-    "..",
-    "dist",
-    "static",
-    filenameArr.find((filename) => filename.substr(-4) == ".css")
-  );
-
-  getStaticDirectoryContents().find((el) => el.substr(0, 4) === "main") ? response.status(200).sendFile(cssPath) : response.status(404).send("Not found");
-});
 
 // API
 
@@ -221,15 +194,15 @@ server.post("/admin/create/images/", (req, res, next) => {
 // Views
 
 server.get("/admin/", (req, res) => {
-  res.send(generateTemplate(getMode(), filenameArr, "admin"));
+  res.send(generateTemplate(getMode(), "admin"));
 });
 
 server.get("/viewer/", (req, res) => {
-  res.send(generateTemplate(getMode(), filenameArr, "app-viewer"));
+  res.send(generateTemplate(getMode(), "app-viewer"));
 });
 
 server.get("/*", (req, res) => {
-  res.send(generateTemplate(getMode(), filenameArr, "app-launcher"));
+  res.send(generateTemplate(getMode(), "app-launcher"));
 });
 
 server.use((err, req, res, next) => {
