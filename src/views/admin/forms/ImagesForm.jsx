@@ -1,74 +1,51 @@
-import React from 'react';
-import Form from './Form';
+import React, { useState, useEffect, useMemo } from 'react';
+import useAPI from './form-hooks/useAPI';
+import { spawnNewInput } from '../../../utils/sharedFormFunctions';
+import { handleFormSubmit } from '../../../utils/sharedFormFunctions';
 import ImageInput from './form-inputs/ImageInput';
 
-class ImagesForm extends Form {
+const ImagesForm = props => {
+  const getInitialisedImage = () => ({ id: 0, descriptionValue: "", filenameValue: "" });
+  const { getImages } = useAPI();
+  const [imagesToAdd, setImagesToAdd] = useState([getInitialisedImage()])
 
-    state = {
-      imagesToAdd: [
-        {
-          id: 0,
-          descriptionValue: "",
-          filenameValue: ""
-        }
-      ]
-    }
-  
-    handleInput = (value, id, fieldName) => {
-      const inputData = this.state.imagesToAdd;
-      inputData[id][fieldName] = value;
-      this.setState({ imagesToAdd: inputData }, () => this.spawnNewInputIfNecessary());
-    }
+  useEffect(() => spawnNewInput(imagesToAdd, lastItemInImageInputArrayContainsInput, { ...getInitialisedImage(), id: imagesToAdd.length }, setImagesToAdd), [imagesToAdd]);
 
-    lastItemInImageInputArrayContainsInput = () => this.state.imagesToAdd[this.state.imagesToAdd.length - 1].descriptionValue || this.state.imagesToAdd[this.state.imagesToAdd.length - 1].filenameValue;
-  
-    spawnNewInputIfNecessary() {
-      if (this.lastItemInImageInputArrayContainsInput()) {
-        const imagesToAdd = this.state.imagesToAdd;
-        imagesToAdd.push({ id: imagesToAdd.length, descriptionValue: "", filenameValue: "" });
-        this.setState({ imagesToAdd })
-      }
-    }
+  const handleInput = (e, id) => {
+    imagesToAdd[id][e.target.name] = e.target.value;
+    setImagesToAdd([...imagesToAdd]);
+  }
 
-    clearFormData = () => {
-      this.setState({
-        imagesToAdd: [
-          {
-            id: 0,
-            descriptionValue: "",
-            filenameValue: ""
-          }
-        ]
-      })
-    }
+  const clearFormData = () => {
+    setImagesToAdd([getInitialisedImage()]);
+  }
 
-    filterInvalidImagesAndSubmit = e => this.handleFormSubmit(e, "/admin/create/images/", {  });
-  
-    filterImagesToAdd = imagesToAdd => imagesToAdd.filter(image => image.descriptionValue != "" && image.filenameValue != "");
+  const filterImagesToAdd = () => imagesToAdd.filter(image => image.descriptionValue != "" && image.filenameValue != "");
 
-    render() {
-      return (
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          let filteredImagesToAdd = this.filterImagesToAdd(this.state.imagesToAdd);
-          filteredImagesToAdd ? 
-            this.handleFormSubmit("/admin/create/images/", { filteredImagesToAdd })
-            .then(res => {
-              this.clearFormData();
-              this.props.onSubmitCallback();
-            })
-          : null;
-        }
-        }>
-          <div className="image-input-container__admin input-container__admin ">
-            <label>Description:</label>
-            <label>Filename:</label>
-          </div>
-            {this.state.imagesToAdd.map((inputData, i) => <ImageInput key={i} inputData={inputData} callback={this.handleInput} />)}
-            <button type="submit" className="panel-btn__admin btn" >Submit</button>
-        </form>
-      )
-    }
+  const lastItemInImageInputArrayContainsInput = () => imagesToAdd[imagesToAdd.length - 1].descriptionValue || imagesToAdd[imagesToAdd.length - 1].filenameValue;
+
+  const formSubmit = e => {
+    e.preventDefault();
+    let filteredImagesToAdd = filterImagesToAdd();
+    filteredImagesToAdd ?
+      handleFormSubmit("/admin/create/images/", { filteredImagesToAdd })
+        .then(res => {
+          clearFormData();
+          getImages();
+        })
+      : null;
+  }
+
+  return (
+    <form onSubmit={(e) => formSubmit(e)}>
+      <div className="image-input-container__admin input-container__admin ">
+        <label>Description:</label>
+        <label>Filename:</label>
+      </div>
+      {imagesToAdd.map((inputData, i) => <ImageInput key={i} inputData={inputData} callback={handleInput} />)}
+      <button type="submit" className="panel-btn__admin btn" >Submit</button>
+    </form>
+  )
 }
 
 export default ImagesForm;

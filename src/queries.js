@@ -169,7 +169,7 @@ const queries = {
       insert into slideshowImages set slideshowId = ?, imageId = ?, positionInSlideshow = ?
     `;
   },
-  insertLocalVideos: () => {
+  insertLocalVideo: () => {
     return `
       insert into localVideos set description = ?, filename = ?, videoDuration = ?
     `;

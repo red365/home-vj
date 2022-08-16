@@ -1,81 +1,78 @@
-import React from 'react';
-import Form from './Form';
+import React, { useState, useEffect } from 'react';
+import useAPI from './form-hooks/useAPI';
+import { handleFormSubmit, spawnNewInput } from '../../../utils/sharedFormFunctions';
+import { lastItemInArray, moreThanOneSetOfInputsExists } from '../../../utils/utils';
 import Dropdown from '../../../shared-components/Dropdown';
-import AddVideoRow from './form-rows/AddVideoRow';
+import LocalVideoRow from './form-rows/LocalVideoRow';
 
-class ProjectLocalVideoForm extends Form {
-  state = {
-    selectedProject: undefined,
-    localVideosToAdd: [
-      {
-        id: 0,
-        videoId: undefined,
-        startAtPosition: undefined,
-        playbackRate: undefined
-      }
-    ]
+const ProjectLocalVideoForm = props => {
+  const getInitialisedLocalVideo = () => ({
+    id: 0,
+    videoId: undefined,
+    startAtPosition: undefined,
+    playbackRate: undefined
+  });
+
+  const { projects, localVideos } = useAPI().data;
+  const [selectedProject, setProject] = useState(undefined);
+  const [localVideosToAdd, setLocalVideosToAdd] = useState([getInitialisedLocalVideo()]);
+
+  useEffect(() => spawnNewInput(localVideosToAdd, lastItemInLocalVideoArrayContainsInput, { ...getInitialisedLocalVideo(), id: localVideosToAdd - length }, setLocalVideosToAdd), [localVideosToAdd]);
+
+  const handleInput = (e, id) => {
+    const localVideos = [...localVideosToAdd];
+    localVideos[id][e.target.name] = e.target.value;
+    setLocalVideosToAdd([...localVideos]);
   }
 
-  handleVideoSelect = (e, idOfVideoToChange) => {
-    const localVideosToAdd = this.state.localVideosToAdd;
-    localVideosToAdd[idOfVideoToChange][e.target.name] = e.target.value;
-    this.setState({ localVideosToAdd: localVideosToAdd }, () => this.spawnNewInputIfNecessary(this.state.videosToAdd));
+  const lastItemInLocalVideoArrayContainsInput = () => lastItemInArray(localVideosToAdd).videoId || lastItemInArray(localVideosToAdd).startAtPosition || lastItemInArray(localVideosToAdd).playbackRate;
+
+  const filterInvalidLocalVideos = () => localVideosToAdd.filter(localVideo => localVideo.videoId != undefined);
+
+  const addProjectIdToLocalVideoObject = (filteredLocalVideos) => filteredLocalVideos.map(localVideo => ({ ...localVideo, projectId: selectedProject }));
+
+  const prepDataForSubmit = () => addProjectIdToLocalVideoObject(filterInvalidLocalVideos(), selectedProject);
+
+  const clearFormData = () => {
+    setLocalVideosToAdd([getInitialisedLocalVideo()]);
+    setProject(undefined);
   }
 
-  lastItemInLocalVideoArrayContainsInput = localVideosToAdd => this.lastItemInArray(localVideosToAdd).videoId || this.lastItemInArray(localVideosToAdd).startAtPosition || this.lastItemInArray(localVideosToAdd).playbackRate;
-
-  spawnNewInputIfNecessary() {
-    if (this.lastItemInLocalVideoArrayContainsInput(this.state.localVideosToAdd)) {
-      const localVideosToAdd = this.state.localVideosToAdd;
-      localVideosToAdd.push({ id: localVideosToAdd.length, videoId: undefined, startAtPosition: '', playbackRate: '' });
-      this.setState({ localVideosToAdd: localVideosToAdd });
-    }
+  const formSubmit = () => {
+    e.preventDefault();
+    let dataToSubmit = localVideosToAdd.length ? prepDataForSubmit(localVideosToAdd, selectedProject) : null;
+    dataToSubmit ? handleFormSubmit("/admin/create/project-media/local-videos", { selectedProject, localVideosToAdd: dataToSubmit }) : null;
+    clearFormData();
   }
 
-  filterInvalidLocalVideos = (localVideosToAdd) => localVideosToAdd.filter(el => el.videoId != undefined);
-
-  addProjectIdToLocalVideoObject = (localVideosToAdd, selectedProject) => localVideosToAdd.map(localVideo => ({ ...localVideo, projectId: selectedProject }));
-
-  prepDataForSubmit = (localVideosToAdd, selectedProject) => this.addProjectIdToLocalVideoObject(this.filterInvalidLocalVideos(localVideosToAdd), selectedProject);
-
-  render() {
-    return (
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const { localVideosToAdd, selectedProject } = this.state;
-        let dataToSubmit = localVideosToAdd.length ? this.prepDataForSubmit(localVideosToAdd, selectedProject) : null;
-        dataToSubmit ? this.handleFormSubmit("/admin/create/project-media/local-videos", { selectedProject, localVideosToAdd: dataToSubmit }) : null;
-        this.setState({ selectedProject: undefined, localVideosToAdd: [{ id: 0, videoId: undefined, random: false }] });
-      }
-      }>
-
-        {this.props.projects ?
+  return (
+    <form onSubmit={(e) => formSubmit()}>
+      {projects ?
+        <div>
           <div>
-            <div>
-              <Dropdown id="selectedProject" classNames="" type="Project" changeHandler={(e) => this.handleInput(e)} dropdownItems={this.props.projects} propToUseAsItemText="name" />
-            </div>
+            <Dropdown id="selectedProject" classNames="" type="Project" changeHandler={(e) => setProject(e.target.value)} dropdownItems={projects} propToUseAsItemText="name" value={selectedProject} />
           </div>
-          : <p>Please create a project</p>
-        }
+        </div>
+        : <p>Please create a project</p>
+      }
 
-        {this.state.selectedProject ?
-          <div>
-            <div className="medium-col__admin input-container__admin">
-              <label>Video:</label>
-              <label className="number-col__admin">Start Position:</label>
-              <label className="number-col__admin">Playback Speed:</label>
-            </div>
-            <div>
-              {this.state.localVideosToAdd.map((video, i) => <AddVideoRow key={i} videos={this.props.localVideos} video={video} handleInput={this.handleVideoSelect} />)}
-            </div>
-            <div>
-              <button type="submit" className="panel-btn__admin btn">Submit</button>
-            </div>
+      {selectedProject ?
+        <div>
+          <div className="medium-col__admin input-container__admin">
+            <label>Video:</label>
+            <label className="number-col__admin">Start Position:</label>
+            <label className="number-col__admin">Playback Speed:</label>
           </div>
-          : null}
-      </form>
-    )
-  }
+          <div>
+            {localVideosToAdd.map((video, i) => <LocalVideoRow key={i} videos={localVideos} video={video} handleInput={handleInput} />)}
+          </div>
+          <div>
+            <button type="submit" className="panel-btn__admin btn">Submit</button>
+          </div>
+        </div>
+        : null}
+    </form>
+  )
 }
 
 export default ProjectLocalVideoForm;
