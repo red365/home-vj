@@ -143,11 +143,11 @@ export function getSlideshowImages(slideshowId) {
 }
 
 export function createStory(params) {
-  const { storyType, storyName, alternateMediaType, randomiseMedia, selectedProject, storyMediaItems } = params;
+  const { storyType, storyName, alternateMediaType, randomiseMedia, selectedProject, mediaItems } = params;
 
   return connection.query(queries.insertStory(), [storyType, storyName, convertBooleanToBinary(alternateMediaType), convertBooleanToBinary(randomiseMedia)]).then((storyQueryResults) => {
     connection.query(queries.insertProjectStory(), [selectedProject, storyQueryResults.insertId]).then((projectStoryResults) => {
-      writeStoryItems(storyMediaItems, storyQueryResults.insertId);
+      writeStoryItems(mediaItems, storyQueryResults.insertId);
     });
   });
 }

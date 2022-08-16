@@ -45,6 +45,8 @@ function convertVideoDurationToS(videoDuration) {
   return hours + minutes + parseInt(seconds);
 }
 
+export const lastItemInArray = arr => arr[arr.length - 1];
+
 const utils = {
   randomise: randomise,
   alternateMediaType: alternateMediaType,

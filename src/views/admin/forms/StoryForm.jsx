@@ -1,133 +1,116 @@
-import React from 'react';
-import Form from './Form';
+import React, { useState, useEffect } from 'react';
+import { handleFormSubmit, handleInput, spawnNewInput } from '../../../utils/sharedFormFunctions';
+import useAPI from './form-hooks/useAPI';
 import Dropdown from '../../../shared-components/Dropdown';
 import StoryLocalVideoRow from './form-rows/StoryLocalVideoRow';
 import StorySlideshowRow from './form-rows/StorySlideshowRow';
 import StoryDuration, { getVideoDuration } from './form-ui/StoryDuration';
 import LocalVideo from '../../../media-types/LocalVideo';
 import { defaultSlideshowSlideDuration } from '../../../media-types/Slideshow';
+import { lastItemInArray } from '../../../utils/utils';
 
-class StoryForm extends Form {
-
-  state = {
+const StoryForm = () => {
+  const getInitialisedStory = () => ({
     storyType: "routine",
+    selectedProject: undefined,
     alternateMediaType: false,
     randomiseMedia: false,
     storyDuration: '',
     storyName: "",
-    storyMediaItems: [
-      {
-        mediaType: undefined
-      }
-    ],
-  }
+  })
 
-  clearFormData = () => {
-    this.setState({
-      storyType: "routine",
-      alternateMediaType: false,
-      randomiseMedia: false,
-      storyName: "",
-      storyMediaItems: [
-        {
-          mediaType: undefined
-        }
-      ]
-    });
-  }
+  const { slideshows, projects, localVideos } = useAPI().data;
+  const [storyProps, setStoryProps] = useState(getInitialisedStory());
+  const [mediaItemsToAdd, setMediaItems] = useState([{ mediaType: undefined }])
+  const { storyType, randomiseMedia, alternateMediaType, selectedProject, storyName, storyDuration } = storyProps;
 
-  dropdownHasASelectedMediaType = storyItem => storyItem["slideshowId"] || storyItem["localVideoId"];
+  const dropdownHasASelectedMediaType = storyItem => storyItem.slideshowId || storyItem.localVideoId;
 
-  spawnNewItemIfNecessary = () => {
-    const storyItem = this.state.storyMediaItems[this.state.storyMediaItems.length - 1];
-    if (this.dropdownHasASelectedMediaType(storyItem)) {
-      const nextState = { ...this.state };
-      nextState.storyMediaItems.push({ mediaType: undefined })
-      this.setState(nextState);
-    }
-  }
+  useEffect(() => spawnNewInput(mediaItemsToAdd, () => dropdownHasASelectedMediaType(lastItemInArray(mediaItemsToAdd)), { mediaType: undefined }, setMediaItems), [mediaItemsToAdd]);
 
-  shouldSetDefaultDuration = (e, storyItem) => e.target.name == "slideDuration" && storyItem.playEntireSlideshow;
+  const shouldSetDefaultDuration = (e, storyItem) => e.target.name == "slideDuration" && storyItem.playEntireSlideshow;
 
-  handleMediaComponentTextAndDropdownChange = (e, i) => {
-    const nextState = { ...this.state };
+  const handleMediaComponentTextAndDropdownChange = (e, i) => {
+    const storyItems = [...mediaItemsToAdd];
+    const storyItem = storyItems[i];
 
-    if (this.shouldSetDefaultDuration(e, nextState.storyMediaItems[i])) {
-      nextState.storyMediaItems[i].slideshowDuration = this.calculateSlideshowDuration(nextState.storyMediaItems[i]);
+    if (shouldSetDefaultDuration(e, storyItem)) {
+      storyItem.slideshowDuration = calculateSlideshowDuration(storyItem);
     }
 
     if (e.target.name == "slideshow") {
-      nextState.storyMediaItems[i].slideshowId = e.target.value;
+      storyItem.slideshowId = e.target.value;
     } else if (e.target.name == "localVideo") {
-      nextState.storyMediaItems[i].localVideoId = e.target.value
+      storyItem.localVideoId = e.target.value
     } else {
-      nextState.storyMediaItems[i][e.target.name] = e.target.value;
+      storyItem[e.target.name] = e.target.value;
     }
 
-    this.setState(nextState, () => this.spawnNewItemIfNecessary());
+    storyItems[i] = storyItem;
+    setMediaItems([...storyItems]);
   }
 
-  checkboxisChecked = (e, id) => e.target.name == id && e.target.checked;
+  const checkboxisChecked = (e, id) => e.target.name == id && e.target.checked;
 
-  checkboxisUnChecked = (e, id) => e.target.name == id && !e.target.checked;
+  const checkboxisUnChecked = (e, id) => e.target.name == id && !e.target.checked;
 
-  handleMediaItemCheckboxChange = (e, i) => {
-    const nextState = { ...this.state };
-    if (this.checkboxisChecked(e, "playEntireVideo")) {
-      nextState.storyMediaItems[i].videoDuration = '';
+  const handleMediaItemCheckboxChange = (e, i) => {
+    const storyItems = [...mediaItemsToAdd];
+    const storyItem = storyItems[i];
+    if (checkboxisChecked(e, "playEntireVideo")) {
+      storyItem.videoDuration = '';
     }
 
-    if (this.checkboxisChecked(e, "playEntireSlideshow")) {
-      nextState.storyMediaItems[i].slideshowDuration = this.calculateSlideshowDuration(nextState.storyMediaItems[i]);
+    if (checkboxisChecked(e, "playEntireSlideshow")) {
+      storyItem.slideshowDuration = calculateSlideshowDuration(storyItem);
     }
 
-    if (this.checkboxisUnChecked(e, "playEntireSlideshow")) {
-      nextState.storyMediaItems[i].slideshowDuration = '';
+    if (checkboxisUnChecked(e, "playEntireSlideshow")) {
+      storyItem.slideshowDuration = '';
     }
 
-    nextState.storyMediaItems[i][e.target.name] = e.target.checked;
-    this.setState(nextState, () => this.spawnNewItemIfNecessary());
+    storyItem[e.target.name] = e.target.checked;
+    storyItems[i] = storyItem;
+    setMediaItems([...storyItems]);
   }
 
-  handleCheckboxChange = (e) => {
-    const nextState = { ...this.state };
-    nextState[e.target.id] = document.getElementById(e.target.id).checked ? true : false;
-    this.setState(nextState, this.spawnNewItemIfNecessary());
-  }
-
-  initialiseBookmarks = storyMediaItems => {
-    this.setState({
-      storyMediaItems: storyMediaItems.map(mediaItem => {
-
-        if (mediaItem.bookmarkVideo) {
-          mediaItem.bookmarkVideo = false;
-        }
-        return mediaItem;
-      })
+  const handleCheckboxChange = (e) => {
+    setStoryProps({
+      ...storyProps, [e.target.name]: storyProps[e.target.name] ? false : true
     })
   }
 
-  handleRadioSelect = (e) => {
-    const { randomiseMedia, alternateMediaType, storyMediaItems } = this.state;
-    e.target.value == "scheduled" ? this.initialiseBookmarks(storyMediaItems) : null;
-    this.setState({
+  const initialiseBookmarkProps = () => {
+    setMediaItems(mediaItemsToAdd.map(mediaItem => {
+      if (mediaItem.bookmarkVideo) {
+        mediaItem.bookmarkVideo = false;
+      }
+      return mediaItem;
+    })
+    )
+  }
+
+  const handleRadioSelect = (e) => {
+    e.target.value == "scheduled" ? initialiseBookmarkProps(mediaItemsToAdd) : null;
+    setStoryProps({
+      ...storyProps,
       storyType: e.target.value,
       randomiseMedia: e.target.value == "scheduled" ? false : randomiseMedia,
       alternateMediaType: e.target.value == "scheduled" ? false : alternateMediaType
     });
   }
 
-  handleMediaSelect = (e, i) => {
-    const storyMediaItems = [...this.state.storyMediaItems];
+  const handleMediaSelect = (e, i) => {
+    const mediaItems = [...mediaItemsToAdd];
     if (e.target.value == "slideshow") {
-      storyMediaItems[i] = this.generateSlideshowItemProps();
+      mediaItems[i] = generateSlideshowItemProps();
     } else if (e.target.value == "localVideo") {
-      storyMediaItems[i] = this.generateLocalVideoItemProps();
+      mediaItems[i] = generateLocalVideoItemProps();
     }
-    this.setState({ storyMediaItems: storyMediaItems })
+    setMediaItems([...mediaItems])
   }
 
-  generateLocalVideoItemProps = () => {
+  const generateLocalVideoItemProps = () => {
     return {
       mediaType: "localVideo",
       localVideoId: "",
@@ -140,7 +123,7 @@ class StoryForm extends Form {
     }
   }
 
-  getNumberOfSlideshowSlides = (slideshowId, slideshows) => {
+  const getNumberOfSlideshowSlides = (slideshowId, slideshows) => {
     let numberOfSlides = undefined;
     try {
       numberOfSlides = slideshows.find(slideshow => slideshow.id == slideshowId)['count(b.slideshowId)'];
@@ -151,7 +134,7 @@ class StoryForm extends Form {
     }
   }
 
-  generateSlideshowItemProps = () => {
+  const generateSlideshowItemProps = () => {
     return {
       mediaType: "slideshow",
       slideshowId: "",
@@ -162,31 +145,28 @@ class StoryForm extends Form {
     }
   }
 
-  generateMediaInputs = (item, i) => {
-    if (this.state.storyMediaItems[i].mediaType == "slideshow") {
-      return <StorySlideshowRow index={i} slideshowValues={this.state.storyMediaItems[i]} handleCheckboxChange={this.handleMediaItemCheckboxChange} handleTextAndDropdownChange={this.handleMediaComponentTextAndDropdownChange} slideshows={this.props.slideshows} />
+  const generateMediaInputs = (item, i) => {
+    if (mediaItemsToAdd[i].mediaType == "slideshow") {
+      return <StorySlideshowRow index={i} slideshowValues={mediaItemsToAdd[i]} handleCheckboxChange={handleMediaItemCheckboxChange} handleTextAndDropdownChange={handleMediaComponentTextAndDropdownChange} slideshows={slideshows} />
     } else {
-      return <StoryLocalVideoRow index={i} storyType={this.state.storyType} localVideoValues={this.state.storyMediaItems[i]} handleCheckboxChange={this.handleMediaItemCheckboxChange} handleTextAndDropdownChange={this.handleMediaComponentTextAndDropdownChange} localVideos={this.props.localVideos} />
+      return <StoryLocalVideoRow index={i} storyType={storyType} localVideoValues={mediaItemsToAdd[i]} handleCheckboxChange={handleMediaItemCheckboxChange} handleTextAndDropdownChange={handleMediaComponentTextAndDropdownChange} localVideos={localVideos} />
     }
   }
 
-  ensureSlideshowHasDuration = (storyMediaItems) => {
-    return storyMediaItems.map(mediaItem => {
+  const ensureSlideshowHasDuration = filteredMediaItems => {
+    return filteredMediaItems.map(mediaItem => {
       if (mediaItem.mediaType == "slideshow" && mediaItem.slideshowDuration == '') {
-        mediaItem.slideshowDuration = this.calculateSlideshowDuration(mediaItem);
+        mediaItem.slideshowDuration = calculateSlideshowDuration(mediaItem);
       }
       return mediaItem;
     })
   }
 
-  calculateSlideshowDuration = (slideshow) => (slideshow.slideDuration || defaultSlideshowSlideDuration) * this.getNumberOfSlideshowSlides(slideshow.slideshowId, this.props.slideshows);
+  const calculateSlideshowDuration = (slideshow) => (slideshow.slideDuration || defaultSlideshowSlideDuration) * getNumberOfSlideshowSlides(slideshow.slideshowId, props.slideshows);
 
-  getFormParams = () => {
-    const { selectedProject, storyType, storyName, alternateMediaType, randomiseMedia, storyMediaItems } = this.state;
-    return { selectedProject, storyType, storyName, alternateMediaType, randomiseMedia, storyMediaItems: this.ensureSlideshowHasDuration(storyMediaItems.filter(item => item.mediaType)) }
-  }
+  const getFormParams = () => ({ ...storyProps, mediaItems: ensureSlideshowHasDuration(mediaItemsToAdd.filter(item => item.mediaType)) })
 
-  durationIsValid = (item, localVideos) => {
+  const durationIsValid = (item, localVideos) => {
     const { startAtPosition, videoDuration, localVideo } = item;
     const totalDurationInS = LocalVideo.convertVideoDurationToS(getVideoDuration(localVideo, localVideos));
     if (item.startAtPosition) {
@@ -196,116 +176,119 @@ class StoryForm extends Form {
     return beginningOfVideo + item.videoDuration <= totalDurationInS;
   }
 
-  durationsAreValid = (localVideos, storyMediaItems) => {
+  const durationsAreValid = (localVideos, mediaItemsToAdd) => {
     let durationsAreValid = true;
-    storyMediaItems.forEach(item => {
-      if (item.mediaType == "localVideo" && item.localVideo && !this.durationIsValid(item, localVideos)) {
+    mediaItemsToAdd.forEach(item => {
+      if (item.mediaType == "localVideo" && item.localVideo && !durationIsValid(item, localVideos)) {
         durationsAreValid = false;
       }
     });
     return durationsAreValid;
   }
 
-  render() {
-    return (
-      <form className="story-form__admin" onSubmit={(e) => {
-        e.preventDefault(e);
-        this.handleFormSubmit("admin/create/story", this.getFormParams());
-        this.clearFormData();
-      }
-      }>
-        <div className="info-panel__admin">
-          <p>
-            Stories can be used to sequence slideshows and videos. The order in which each story item is selected will define the order in which they are played (unless the story's "random" or "alternate media" options are enabled).
-          </p>
-          <p>
-            A "routine" story will loop back to the first item and run in perpetuity. It is intended for general visuals to run in the background during a range of songs. This mode supports the video bookmark option. When enabled video bookmarking will force a video, on subsequent playthroughs, to resume playing at the point where it was previously interrupted.
-          </p>
-          <p>
-            A "scheduled" story will only play through once. This format is intended for items to be "scheduled" using the duration options so that they trigger at key points during a specific song,
-            so they can be used to display lyrics or emphasise a key theme from the song. When this story type is selected there is a field in the bottom right corner where you can enter the song running time (in seconds)
-            and be informed how much song time you have left to fill with story items.
-          </p>
-          <p>
-            NOTE: Duration times are important and strictly enforced. In practical terms this means that if a duration is invalid (the duration of the story item exceeds the actual video's run time) the submit button will be disabled.
-          </p>
-        </div>
-        <div id="story-options" className={this.state.selectedProject ? `story-options-with-project__admin` : `story-options-no-project__admin`} b>
-          {this.props.projects ?
-            <div>
-              <div>
-                <Dropdown id="selectedProject" classes="" type="Project" changeHandler={(e) => this.handleInput(e)} dropdownItems={this.props.projects} propToUseAsItemText="name" />
-              </div>
-            </div>
-            : <p>Please create a project</p>
-          }
+  const clearFormData = () => {
+    setStoryProps(getInitialisedStory());
+  }
 
-          {/* Each form control has it's own check to avoid a clash between space-evenly and React's parent container constraint  */}
-          {this.state.selectedProject ?
+  const formSubmit = (e) => {
+    e.preventDefault();
+    handleFormSubmit("admin/create/story", getFormParams());
+    clearFormData();
+  }
+
+  return (
+    <form className="story-form__admin" onSubmit={(e) => formSubmit(e)}>
+      <div className="info-panel__admin">
+        <p>
+          Stories can be used to sequence slideshows and videos. The order in which each story item is selected will define the order in which they are played (unless the story's "random" or "alternate media" options are enabled).
+        </p>
+        <p>
+          A "routine" story will loop back to the first item and run in perpetuity. It is intended for general visuals to run in the background during a range of songs. This mode supports the video bookmark option. When enabled video bookmarking will force a video, on subsequent playthroughs, to resume playing at the point where it was previously interrupted.
+        </p>
+        <p>
+          A "scheduled" story will only play through once. This format is intended for items to be "scheduled" using the duration options so that they trigger at key points during a specific song,
+          so they can be used to display lyrics or emphasise a key theme from the song. When this story type is selected there is a field in the bottom right corner where you can enter the song running time (in seconds)
+          and be informed how much song time you have left to fill with story items.
+        </p>
+        <p>
+          NOTE: Duration times are important and strictly enforced. In practical terms this means that if a duration is invalid (the duration of the story item exceeds the actual video's run time) the submit button will be disabled.
+        </p>
+      </div>
+      <div id="story-options" className={selectedProject ? `story-options-with-project__admin` : `story-options-no-project__admin`}>
+        {projects ?
+          <div>
             <div>
-              <label htmlFor="storyName">Story Name:</label>
-              <input id="storyName" type="text" value={this.state.storyName} onChange={(e) => this.handleInput(e)} />
+              <Dropdown id="selectedProject" name="selectedProject" classes="" type="Project" changeHandler={(e) => handleInput(e, setStoryProps, storyProps)} dropdownItems={projects} propToUseAsItemText="name" value={selectedProject} />
             </div>
-            : null
-          }
-          {this.state.selectedProject ?
-            <div className="radio-controls__admin">
-              <label></label>
-              <input type="radio" checked={this.state.storyType == "routine"} id="routine" name="story_type" value="routine" onChange={(e) => this.handleRadioSelect(e)} />
-              <label htmlFor="routine">Routine</label>
-              <input type="radio" id="scheduled" checked={this.state.storyType == "scheduled"} name="story_type" value="scheduled" onChange={(e) => this.handleRadioSelect(e)} />
-              <label htmlFor="scheduled">Scheduled</label>
-            </div>
-            : null
-          }
-          {this.state.selectedProject ?
-            <div>
-              <label htmlFor="alternateMedia" hidden={this.state.storyType == "scheduled" ? true : false}>Alternate Media:</label>
-              <input type="checkbox" id="alternateMediaType" name="alternateMediaType" value={this.state.alternateMediaType} onChange={(e) => this.handleCheckboxChange(e)} hidden={this.state.storyType == "scheduled" ? true : false} />
-            </div>
-            : null
-          }
-          {this.state.selectedProject ?
-            <div>
-              <label htmlFor="random" hidden={this.state.storyType == "scheduled" ? true : false}>Random:</label>
-              <input type="checkbox" id="randomiseMedia" name="randomiseMedia" value={this.state.randomiseMedia} onChange={(e) => this.handleCheckboxChange(e)} hidden={this.state.storyType == "scheduled" ? true : false} />
-            </div>
-            : null
-          }
-        </div>
-        {this.state.selectedProject ?
-          this.state.storyMediaItems.map((item, i) => {
-            return (
-              <div className="story-item__admin" key={i}>
-                <Dropdown
-                  id={`media-selector-${i}`}
-                  classes=""
-                  type="Media Type"
-                  changeHandler={(e) => this.handleMediaSelect(e, i)}
-                  dropdownItems={[{ id: "slideshow", name: "Slideshow", }, { id: "localVideo", name: "Local Video", }]}
-                  propToUseAsItemText="name"
-                />
-                {item.mediaType ? this.generateMediaInputs(item, i) : null}
-              </div>
-            )
-          })
+          </div>
+          : <p>Please create a project</p>
+        }
+
+        {/* Each form control has it's own check to avoid a clash between space-evenly and React's parent container constraint  */}
+        {selectedProject ?
+          <div>
+            <label htmlFor="storyName">Story Name:</label>
+            <input id="storyName" name="storyName" type="text" value={storyName} onChange={(e) => handleInput(e, setStoryProps, storyProps)} />
+          </div>
           : null
         }
-        <div className="story-panel-footer__admin">
-          <button type="submit" className="panel-btn__admin btn" disabled={this.state.storyType == "scheduled" && !this.durationsAreValid(this.state.localVideos, this.state.storyMediaItems)}>Submit</button>
-          {this.state.storyType == "scheduled" ?
-            <div>
-              <div>
-                <label>Enter a story duration in seconds:</label>
-                <input className="number-col__admin" type="number" value={this.state.storyDuration} onChange={(e) => this.setState({ storyDuration: e.target.value })} />
-                <StoryDuration storyMediaItems={this.state.storyMediaItems} storyDuration={this.state.storyDuration} slideshows={this.props.slideshows} localVideos={this.props.localVideos} getNumberOfSlideshowSlides={this.getNumberOfSlideshowSlides} />
-              </div>
+        {selectedProject ?
+          <div className="radio-controls__admin">
+            <input type="radio" checked={storyType == "routine"} id="routine" value="routine" onChange={(e) => handleRadioSelect(e)} />
+            <label htmlFor="routine">Routine</label>
+            <input type="radio" id="scheduled" checked={storyType == "scheduled"} value="scheduled" onChange={(e) => handleRadioSelect(e)} />
+            <label htmlFor="scheduled">Scheduled</label>
+          </div>
+          : null
+        }
+        {selectedProject ?
+          <div>
+            <label htmlFor="alternateMedia" hidden={storyType == "scheduled" ? true : false}>Alternate Media:</label>
+            <input type="checkbox" id="alternateMediaType" name="alternateMediaType" checked={alternateMediaType} onChange={(e) => handleCheckboxChange(e)} hidden={storyType == "scheduled" ? true : false} />
+          </div>
+          : null
+        }
+        {selectedProject ?
+          <div>
+            <label htmlFor="random" hidden={storyType == "scheduled" ? true : false}>Random:</label>
+            <input type="checkbox" id="randomiseMedia" name="randomiseMedia" value={randomiseMedia} onChange={(e) => handleCheckboxChange(e)} hidden={storyType == "scheduled" ? true : false} />
+          </div>
+          : null
+        }
+      </div>
+      {selectedProject ?
+        mediaItemsToAdd.map((item, i) => {
+          return (
+            <div className="story-item__admin" key={i}>
+              <Dropdown
+                id={`media-selector-${i}`}
+                classes=""
+                type="Media Type"
+                changeHandler={(e) => handleMediaSelect(e, i)}
+                dropdownItems={[{ id: "slideshow", name: "Slideshow", }, { id: "localVideo", name: "Local Video", }]}
+                propToUseAsItemText="name"
+                value={item.mediaType || ""}
+              />
+              {item.mediaType ? generateMediaInputs(item, i) : null}
             </div>
-            : null}
-        </div>
-      </form>
-    )
-  }
+          )
+        })
+        : null
+      }
+      <div className="story-panel-footer__admin">
+        <button type="submit" className="panel-btn__admin btn" disabled={storyType == "scheduled" && !durationsAreValid(localVideos, mediaItemsToAdd)}>Submit</button>
+        {storyType == "scheduled" ?
+          <div>
+            <div>
+              <label>Enter a story duration in seconds:</label>
+              <input className="number-col__admin" type="number" value={storyDuration} onChange={(e) => setStoryProps({ ...storyProps, storyDuration: e.target.value })} />
+              <StoryDuration mediaItems={mediaItemsToAdd} storyDuration={storyDuration} slideshows={slideshows} localVideos={localVideos} getNumberOfSlideshowSlides={getNumberOfSlideshowSlides} />
+            </div>
+          </div>
+          : null}
+      </div>
+    </form>
+  )
 }
 
 export default StoryForm;
