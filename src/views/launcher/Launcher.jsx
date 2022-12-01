@@ -19,10 +19,6 @@ const Launcher = props => {
     })
   }
 
-  console.log(projectSlideshows)
-  console.log(projectLocalVideos)
-  console.log(projectStories)
-
   return (
     <div className="page-container__common">
       <header className="">

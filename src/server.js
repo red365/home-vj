@@ -1,4 +1,3 @@
-console.log("server.js")
 import { blah } from './environment';
 import express from "express";
 import cors from "cors";

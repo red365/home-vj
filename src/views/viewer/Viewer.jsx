@@ -112,7 +112,6 @@ class Viewer extends Component {
   }
 
   scheduleNextStoryItem = (storyType, storyItem) => {
-    console.log("next story item is: ", storyItem)
     setTimeout(() => {
       this.configureStoryItemToDisplay(storyType);
     }, storyItem ? storyItem.getDurationInMs() : 0);
@@ -154,8 +153,6 @@ class Viewer extends Component {
   waitForMediaToDisplay = () => {
     console.log("waiting for media")
     fetch("/view/").then(res => res.json()).then(res => {
-      console.log("res", res)
-      console.log("test")
       res.mediaType != "slideshow" ? this.closeLightbox() : null
       this.clearTimeouts();
 

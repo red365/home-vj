@@ -1,13 +1,13 @@
 import React from 'react';
 import { SRLWrapper } from "simple-react-lightbox";
-import {convertSToMs} from '../../../utils/utils';
+import { convertSToMs } from '../../../utils/utils';
 
 function SlideshowWrapper(props) {
 
-  const slideshowImages = props.slideshow.map( (image, i) => {
+  const slideshowImages = props.slideshow.map((image, i) => {
     return (
       <a key={i} href={`/static/img/${image.filename}`}>
-        <img hidden id={`image-${i+1}`} className="thumbnail" src={`/static/img/${image.filename}`} />
+        <img hidden id={`image-${i + 1}`} className="thumbnail" src={`/static/img/${image.filename}`} />
       </a>
     )
   })
@@ -36,13 +36,11 @@ function SlideshowWrapper(props) {
     // onCountSlides: object => console.log(object)
   };
 
-  
-  // Use jQuery (if available) to open lightbox as it's faster
-  $ ? setTimeout( () => { $("#openLightbox").click(); $("button[title='Play']").click()}, 1000) : setTimeout( () => document.getElementById("openLightbox").click(), 1000)
+  $ ? setTimeout(() => { $("#openLightbox").click(); $("button[title='Play']").click() }, 1000) : setTimeout(() => document.getElementById("openLightbox").click(), 1000)
   return (
     <div>
-      <SRLWrapper options={ options } callbacks={callbacks}  >
-        { slideshowImages }
+      <SRLWrapper options={options} callbacks={callbacks}  >
+        {slideshowImages}
       </SRLWrapper>
     </div>
   )
