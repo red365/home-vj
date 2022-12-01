@@ -18,14 +18,14 @@ const Launcher = props => {
       body: JSON.stringify({ mediaType: mediaType, mediaId: id, projectId: selectedProject })
     })
   }
-
+  console.log("selectedProject", selectedProject);
   return (
     <div className="page-container__common">
       <header className="">
         <h1 className="">Home VJ: Launcher</h1>
         {projects ?
           <div>
-            <Dropdown id="selectedProject" classes="header-dropdown__launcher" type="Project" changeHandler={(e) => setSelectedProject(e.target.value)} dropdownItems={projects} propToUseAsItemText="name" />
+            <Dropdown id="selectedProject" classes="header-dropdown__launcher" type="Project" changeHandler={(e) => setSelectedProject(e.target.value)} dropdownItems={projects} propToUseAsItemText="name" value={selectedProject} />
           </div>
           : <p>There are no projects</p>
         }
