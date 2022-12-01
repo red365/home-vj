@@ -112,9 +112,10 @@ class Viewer extends Component {
   }
 
   scheduleNextStoryItem = (storyType, storyItem) => {
+    console.log("next story item is: ", storyItem)
     setTimeout(() => {
       this.configureStoryItemToDisplay(storyType);
-    }, storyItem.getDurationInMs());
+    }, storyItem ? storyItem.getDurationInMs() : 0);
   }
 
   convertSlideshowsToObjects = slideshowItems => slideshowItems.map(slideshow => this.createMediaType(slideshow, true));
